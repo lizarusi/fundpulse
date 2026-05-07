@@ -1,0 +1,51 @@
+version: 2
+project_name: healthcheck
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: healthcheck
+    main: ./cmd/healthcheck
+    binary: healthcheck
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+
+archives:
+  - id: tar
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    files:
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  github:
+    owner: lizarusi
+    name: investments-healthcheck
+
+brews:
+  - name: healthcheck
+    repository:
+      owner: lizarusi
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/lizarusi/investments-healthcheck"
+    description: "Daily Mac CLI that scrapes investment funds from analizy.pl and posts a Telegram digest."
+    install: |
+      bin.install "healthcheck"
+    test: |
+      assert_match "healthcheck", shell_output("#{bin}/healthcheck help")
