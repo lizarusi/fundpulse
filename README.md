@@ -83,13 +83,34 @@ Useful for testing or unusual setups:
 | `HEALTHCHECK_DB` | path to `data.db` |
 | `HEALTHCHECK_LOG` | path to `run.log` |
 
-## Uninstall
+## Updating
+
+If you installed via Homebrew:
 
 ```bash
-make uninstall          # removes binary + launchd schedule
+brew upgrade healthcheck
 ```
 
-Config and DB are preserved by design. Delete them yourself if you want a clean wipe:
+The launchd schedule keeps pointing at the binary path, so a brew upgrade is enough — no need to re-run `init`.
+
+## Uninstall
+
+Always run `healthcheck uninstall` *before* removing the binary — it cleans up the launchd schedule.
+
+If you installed via Homebrew:
+
+```bash
+healthcheck uninstall                    # remove launchd schedule
+brew uninstall --cask healthcheck        # remove binary
+```
+
+If you installed from source:
+
+```bash
+make uninstall                           # both steps in one
+```
+
+Config and DB are preserved by design. Delete them yourself for a clean wipe:
 
 ```bash
 rm ~/.config/investments-healthcheck/config.yaml
