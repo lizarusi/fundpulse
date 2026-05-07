@@ -20,6 +20,18 @@ func openTest(t *testing.T) *Store {
 	return s
 }
 
+func TestOpenCreatesMissingParentDirectory(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "nested", "deeper", "test.db")
+	s, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open should create parent dirs: %v", err)
+	}
+	defer s.Close()
+	if err := s.Migrate(); err != nil {
+		t.Fatalf("Migrate after Open: %v", err)
+	}
+}
+
 func TestFundRoundTrip(t *testing.T) {
 	s := openTest(t)
 	want := Fund{
