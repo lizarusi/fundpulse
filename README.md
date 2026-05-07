@@ -6,9 +6,24 @@ Single static Go binary. No runtime dependencies. Schedules itself via `launchd`
 
 ## Install
 
+### Homebrew (recommended)
+
 ```bash
-make install            # build and copy binary to /usr/local/bin/
+brew install lizarusi/tap/healthcheck
 healthcheck init        # interactive setup (Telegram + funds + launchd schedule)
+```
+
+`brew upgrade healthcheck` later picks up new releases automatically.
+
+### From source
+
+Requires Go 1.26+.
+
+```bash
+git clone https://github.com/lizarusi/investments-healthcheck
+cd investments-healthcheck
+make install            # builds and copies binary to /usr/local/bin/
+healthcheck init
 ```
 
 `make install` may require `sudo` depending on `/usr/local/bin` permissions.
