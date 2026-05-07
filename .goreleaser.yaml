@@ -36,7 +36,7 @@ release:
     owner: lizarusi
     name: investments-healthcheck
 
-brews:
+homebrew_casks:
   - name: healthcheck
     repository:
       owner: lizarusi
@@ -45,7 +45,3 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: "https://github.com/lizarusi/investments-healthcheck"
     description: "Daily Mac CLI that scrapes investment funds from analizy.pl and posts a Telegram digest."
-    install: |
-      bin.install "healthcheck"
-    test: |
-      assert_match "healthcheck", shell_output("#{bin}/healthcheck help")
