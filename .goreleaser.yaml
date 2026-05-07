@@ -45,3 +45,8 @@ homebrew_casks:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: "https://github.com/lizarusi/investments-healthcheck"
     description: "Daily Mac CLI that scrapes investment funds from analizy.pl and posts a Telegram digest."
+    hooks:
+      post:
+        install: |
+          system_command "/usr/bin/xattr",
+                         args: ["-dr", "com.apple.quarantine", "#{staged_path}/healthcheck"]
