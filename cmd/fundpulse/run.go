@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lizarusi/investments-healthcheck/internal/analyzer"
-	"github.com/lizarusi/investments-healthcheck/internal/config"
-	"github.com/lizarusi/investments-healthcheck/internal/portfolio"
-	"github.com/lizarusi/investments-healthcheck/internal/scraper"
-	"github.com/lizarusi/investments-healthcheck/internal/storage"
-	"github.com/lizarusi/investments-healthcheck/internal/telegram"
+	"github.com/lizarusi/fundpulse/internal/analyzer"
+	"github.com/lizarusi/fundpulse/internal/config"
+	"github.com/lizarusi/fundpulse/internal/portfolio"
+	"github.com/lizarusi/fundpulse/internal/scraper"
+	"github.com/lizarusi/fundpulse/internal/storage"
+	"github.com/lizarusi/fundpulse/internal/telegram"
 )
 
 func cmdRun(args []string) error {
@@ -27,7 +27,7 @@ func cmdShow(args []string) error {
 func runOnce(dryRun, skipDBWrite bool) error {
 	cfg, err := config.Load(config.DefaultPath())
 	if err != nil {
-		return fmt.Errorf("load config (have you run `healthcheck init`?): %w", err)
+		return fmt.Errorf("load config (have you run `fundpulse init`?): %w", err)
 	}
 	if err := config.Validate(cfg); err != nil {
 		return fmt.Errorf("config invalid: %w", err)
@@ -117,6 +117,13 @@ func runOnce(dryRun, skipDBWrite bool) error {
 		fm.Currency = snap.Currency
 		fm.RiskLabel = snap.RiskLabel
 		fm.RiskLevel = snap.RiskLevel
+
+		// Cold start: if DB only has 1 price, fm.Change1DPct will be 0.
+		// Use the 1d change from the scraper as a fallback.
+		if fm.Change1DPct == 0 && snap.Change1DPct != 0 {
+			fm.Change1DPct = snap.Change1DPct
+		}
+
 		fundMetrics = append(fundMetrics, fm)
 
 		fv := analyzer.PerFund(fm, thresholds)

@@ -1,4 +1,4 @@
-BINARY := healthcheck
+BINARY := fundpulse
 BIN_DIR := bin
 INSTALL_DIR := /usr/local/bin
 
@@ -6,7 +6,7 @@ INSTALL_DIR := /usr/local/bin
 
 build:
 	mkdir -p $(BIN_DIR)
-	go build -o $(BIN_DIR)/$(BINARY) ./cmd/healthcheck
+	go build -o $(BIN_DIR)/$(BINARY) ./cmd/fundpulse
 
 test:
 	go test ./...

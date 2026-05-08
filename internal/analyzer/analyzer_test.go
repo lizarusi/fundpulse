@@ -3,7 +3,7 @@ package analyzer
 import (
 	"testing"
 
-	"github.com/lizarusi/investments-healthcheck/internal/portfolio"
+	"github.com/lizarusi/fundpulse/internal/portfolio"
 )
 
 func defaultThresholds() Thresholds {

@@ -3,7 +3,7 @@ package analyzer
 import (
 	"fmt"
 
-	"github.com/lizarusi/investments-healthcheck/internal/portfolio"
+	"github.com/lizarusi/fundpulse/internal/portfolio"
 )
 
 type Level int

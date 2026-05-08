@@ -115,25 +115,25 @@ func Validate(c Config) error {
 }
 
 func DefaultPath() string {
-	if p := os.Getenv("HEALTHCHECK_CONFIG"); p != "" {
+	if p := os.Getenv("FUNDPULSE_CONFIG"); p != "" {
 		return p
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "investments-healthcheck", "config.yaml")
+	return filepath.Join(home, ".config", "fundpulse", "config.yaml")
 }
 
 func DefaultDBPath() string {
-	if p := os.Getenv("HEALTHCHECK_DB"); p != "" {
+	if p := os.Getenv("FUNDPULSE_DB"); p != "" {
 		return p
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, "Library", "Application Support", "investments-healthcheck", "data.db")
+	return filepath.Join(home, "Library", "Application Support", "fundpulse", "data.db")
 }
 
 func DefaultLogPath() string {
-	if p := os.Getenv("HEALTHCHECK_LOG"); p != "" {
+	if p := os.Getenv("FUNDPULSE_LOG"); p != "" {
 		return p
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, "Library", "Logs", "investments-healthcheck", "run.log")
+	return filepath.Join(home, "Library", "Logs", "fundpulse", "run.log")
 }

@@ -7,24 +7,24 @@ import (
 
 func TestRenderPlistContainsTimingAndPaths(t *testing.T) {
 	plist, err := RenderPlist(Config{
-		Label:     "com.user.investments-healthcheck",
-		Binary:    "/usr/local/bin/healthcheck",
+		Label:     "com.lizarusi.fundpulse",
+		Binary:    "/usr/local/bin/fundpulse",
 		Args:      []string{"run"},
 		Hour:      18,
 		Minute:    30,
-		LogPath:   "/Users/u/Library/Logs/investments-healthcheck/run.log",
+		LogPath:   "/Users/u/Library/Logs/fundpulse/run.log",
 		RunAtLoad: true,
 	})
 	if err != nil {
 		t.Fatalf("RenderPlist: %v", err)
 	}
 	mustContain := []string{
-		"<string>com.user.investments-healthcheck</string>",
-		"<string>/usr/local/bin/healthcheck</string>",
+		"<string>com.lizarusi.fundpulse</string>",
+		"<string>/usr/local/bin/fundpulse</string>",
 		"<string>run</string>",
 		"<integer>18</integer>",
 		"<integer>30</integer>",
-		"/Users/u/Library/Logs/investments-healthcheck/run.log",
+		"/Users/u/Library/Logs/fundpulse/run.log",
 		"<key>RunAtLoad</key>",
 		"<key>StartCalendarInterval</key>",
 	}

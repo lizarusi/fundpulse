@@ -4,21 +4,30 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
-	"github.com/lizarusi/investments-healthcheck/internal/config"
-	"github.com/lizarusi/investments-healthcheck/internal/launchd"
-	"github.com/lizarusi/investments-healthcheck/internal/scraper"
-	"github.com/lizarusi/investments-healthcheck/internal/storage"
-	"github.com/lizarusi/investments-healthcheck/internal/wizard"
+	"github.com/lizarusi/fundpulse/internal/config"
+	"github.com/lizarusi/fundpulse/internal/launchd"
+	"github.com/lizarusi/fundpulse/internal/scraper"
+	"github.com/lizarusi/fundpulse/internal/storage"
+	"github.com/lizarusi/fundpulse/internal/wizard"
 )
 
 func cmdInit(args []string) error {
 	cfgPath := config.DefaultPath()
+	var initialCfg config.Config
 	if _, err := os.Stat(cfgPath); err == nil {
-		fmt.Fprintf(os.Stderr, "config already exists at %s — running wizard will overwrite it\n", cfgPath)
+		fmt.Fprintf(os.Stderr, "config already exists at %s — running wizard will allow you to edit it\n", cfgPath)
+		initialCfg, err = config.Load(cfgPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not load existing config: %v\n", err)
+			initialCfg = config.WithDefaults(config.Config{})
+		}
+	} else {
+		initialCfg = config.WithDefaults(config.Config{})
 	}
 
-	cfg, err := wizard.Run(os.Stdin, os.Stdout, wizard.DefaultValidator())
+	cfg, err := wizard.Run(os.Stdin, os.Stdout, initialCfg, wizard.DefaultValidator())
 	if err != nil {
 		return fmt.Errorf("wizard: %w", err)
 	}
@@ -56,13 +65,32 @@ func cmdInit(args []string) error {
 			PurchaseUnits: f.PurchaseUnits,
 			PurchasePrice: f.PurchasePrice,
 		})
-		_ = store.UpsertPrice(storage.Price{
-			FundID: f.FundID,
-			Date:   snap.NAVDate,
-			NAV:    snap.NAV,
-			Source: "daily",
-		})
-		fmt.Printf("  ✓ %s — %s @ %.2f %s on %s\n", f.FundID, snap.Name, snap.NAV, snap.Currency, snap.NAVDate.Format("2006-01-02"))
+
+		fmt.Printf("  ✓ %s — %s\n", f.FundID, snap.Name)
+		fmt.Printf("    → Fetching history since %s... ", f.PurchaseDate.Format("2006-01-02"))
+		history, err := scraper.FetchHistory(f.FundID, f.PurchaseDate, time.Now())
+		if err != nil {
+			fmt.Printf("failed: %v\n", err)
+		} else {
+			count := 0
+			for _, p := range history {
+				_ = store.UpsertPrice(storage.Price{
+					FundID: f.FundID,
+					Date:   p.Date,
+					NAV:    p.Value,
+					Source: "init",
+				})
+				count++
+			}
+			// Also ensure today's snapshot is in (it might be newer than history series)
+			_ = store.UpsertPrice(storage.Price{
+				FundID: f.FundID,
+				Date:   snap.NAVDate,
+				NAV:    snap.NAV,
+				Source: "daily",
+			})
+			fmt.Printf("done (%d prices)\n", count)
+		}
 	}
 	fmt.Printf("→ Initialised database at %s\n", config.DefaultDBPath())
 
@@ -86,7 +114,7 @@ func cmdInit(args []string) error {
 		return fmt.Errorf("install launchd: %w", err)
 	}
 	fmt.Printf("→ Scheduled daily at %02d:%02d via launchd (label %s)\n", hour, minute, appLabel)
-	fmt.Println("Done. Run `healthcheck show` to preview the report, or `healthcheck run` to send the first Telegram message now.")
+	fmt.Println("Done. Run `fundpulse show` to preview the report, or `fundpulse run` to send the first Telegram message now.")
 	return nil
 }
 

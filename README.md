@@ -1,4 +1,4 @@
-# investments-healthcheck
+# fundpulse
 
 A small Mac CLI that scrapes your investment funds from [analizy.pl](https://www.analizy.pl) once a day, computes profit/loss and trend signals from accumulated price history, and posts a daily verdict (very good / good / stable / warning / alert) to a private Telegram channel.
 
@@ -9,21 +9,21 @@ Single static Go binary. No runtime dependencies. Schedules itself via `launchd`
 ### Homebrew (recommended)
 
 ```bash
-brew install lizarusi/tap/healthcheck
-healthcheck init        # interactive setup (Telegram + funds + launchd schedule)
+brew install lizarusi/tap/fundpulse
+fundpulse init        # interactive setup (Telegram + funds + launchd schedule)
 ```
 
-`brew upgrade healthcheck` later picks up new releases automatically.
+`brew upgrade fundpulse` later picks up new releases automatically.
 
 ### From source
 
 Requires Go 1.26+.
 
 ```bash
-git clone https://github.com/lizarusi/investments-healthcheck
-cd investments-healthcheck
+git clone https://github.com/lizarusi/fundpulse
+cd fundpulse
 make install            # builds and copies binary to /usr/local/bin/
-healthcheck init
+fundpulse init
 ```
 
 `make install` may require `sudo` depending on `/usr/local/bin` permissions.
@@ -40,20 +40,25 @@ After init, the wizard installs a `launchd` agent that runs daily at 18:00 (conf
 
 | Path | Purpose |
 |---|---|
-| `~/.config/investments-healthcheck/config.yaml` | Editable config: Telegram secrets, fund list, alert thresholds, schedule time |
-| `~/Library/Application Support/investments-healthcheck/data.db` | SQLite price history |
-| `~/Library/Logs/investments-healthcheck/run.log` | launchd stdout/stderr |
-| `~/Library/LaunchAgents/com.user.investments-healthcheck.plist` | The schedule itself |
+| `~/.config/fundpulse/config.yaml` | Editable config: Telegram secrets, fund list, alert thresholds, schedule time |
+| `~/Library/Application Support/fundpulse/data.db` | SQLite price history |
+| `~/Library/Logs/fundpulse/run.log` | launchd stdout/stderr |
+| `~/Library/LaunchAgents/com.lizarusi.fundpulse.plist` | The schedule itself |
 
 ## Commands
 
 | Command | Purpose |
 |---|---|
-| `healthcheck init` | First-time setup; idempotent (re-running edits config). |
-| `healthcheck run` | Manually run the daily job: scrape, store, send Telegram. |
-| `healthcheck run --dry-run` | Same as `run` but prints the message instead of sending it. Still writes today's price to the DB. |
-| `healthcheck show` | Print today's report to stdout. Does NOT write to the DB and does NOT send Telegram. |
-| `healthcheck uninstall` | Remove the launchd schedule. Config and DB are preserved. |
+| `fundpulse init` | First-time setup; idempotent (re-running edits config and reinstalls launchd). |
+| `fundpulse config` | Edit existing config interactively — Telegram, schedule, base currency, thresholds, and funds. Press Enter at any prompt to keep the current value. Reinstalls launchd only if the schedule changed; fetches a snapshot for any newly added fund. |
+| `fundpulse config show` | Print the current config (bot token masked) and the funds table. Read-only. |
+| `fundpulse backfill` | Re-fetch all historical prices for configured funds from analizy.pl's chart endpoint. Idempotent (upserts by date). |
+| `fundpulse run` | Manually run the daily job: scrape, store, send Telegram. |
+| `fundpulse run --dry-run` | Same as `run` but prints the message instead of sending it. Still writes today's price to the DB. |
+| `fundpulse show` | Print today's report to stdout. Does NOT write to the DB and does NOT send Telegram. |
+| `fundpulse uninstall` | Remove the launchd schedule. Config and DB are preserved. |
+
+For ad-hoc fund management, `fundpulse config` is the canonical tool. After the top-level prompts, you'll see each existing fund and choose **(k)eep / (e)dit / (d)elete**, then a final "Add a fund?" loop.
 
 ## Verdict rules
 
@@ -71,7 +76,7 @@ Thresholds live in `config.yaml` under `thresholds:` — edit and save, no resta
 
 ## Cold start
 
-The tool does not (yet) backfill historical prices. Each daily run appends one NAV per fund. Until ~5 trading days of history accumulate, the analyzer skips the 5d-trend rules and reports profit/loss against your purchase price only.
+`fundpulse init` automatically backfills historical NAVs since each fund's purchase date by calling `analizy.pl`'s chart endpoint. If that fails (rate-limited, schema change), the daily run keeps appending one price per day; after ~5 trading days the 5d-trend rules become available. You can re-run `fundpulse backfill` at any time.
 
 ## Environment overrides
 
@@ -79,29 +84,29 @@ Useful for testing or unusual setups:
 
 | Variable | Overrides |
 |---|---|
-| `HEALTHCHECK_CONFIG` | path to `config.yaml` |
-| `HEALTHCHECK_DB` | path to `data.db` |
-| `HEALTHCHECK_LOG` | path to `run.log` |
+| `FUNDPULSE_CONFIG` | path to `config.yaml` |
+| `FUNDPULSE_DB` | path to `data.db` |
+| `FUNDPULSE_LOG` | path to `run.log` |
 
 ## Updating
 
 If you installed via Homebrew:
 
 ```bash
-brew upgrade healthcheck
+brew upgrade fundpulse
 ```
 
 The launchd schedule keeps pointing at the binary path, so a brew upgrade is enough — no need to re-run `init`.
 
 ## Uninstall
 
-Always run `healthcheck uninstall` *before* removing the binary — it cleans up the launchd schedule.
+Always run `fundpulse uninstall` *before* removing the binary — it cleans up the launchd schedule.
 
 If you installed via Homebrew:
 
 ```bash
-healthcheck uninstall                    # remove launchd schedule
-brew uninstall --cask healthcheck        # remove binary
+fundpulse uninstall                    # remove launchd schedule
+brew uninstall --cask fundpulse        # remove binary
 ```
 
 If you installed from source:
@@ -113,15 +118,15 @@ make uninstall                           # both steps in one
 Config and DB are preserved by design. Delete them yourself for a clean wipe:
 
 ```bash
-rm ~/.config/investments-healthcheck/config.yaml
-rm ~/Library/Application\ Support/investments-healthcheck/data.db
+rm ~/.config/fundpulse/config.yaml
+rm ~/Library/Application\ Support/fundpulse/data.db
 ```
 
 ## Development
 
 ```bash
-make build              # bin/healthcheck
+make build              # bin/fundpulse
 make test               # go test ./...
-make show               # build + healthcheck show
-make dryrun             # build + healthcheck run --dry-run
+make show               # build + fundpulse show
+make dryrun             # build + fundpulse run --dry-run
 ```

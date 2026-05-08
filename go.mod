@@ -1,4 +1,4 @@
-module github.com/lizarusi/investments-healthcheck
+module github.com/lizarusi/fundpulse
 
 go 1.26.2
 

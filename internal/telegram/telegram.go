@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lizarusi/investments-healthcheck/internal/analyzer"
+	"github.com/lizarusi/fundpulse/internal/analyzer"
 )
 
 type Report struct {
@@ -33,6 +33,25 @@ type FundLine struct {
 	RiskLabel     string
 }
 
+func TranslateRiskLabel(s string) string {
+	switch strings.ToLower(s) {
+	case "bardzo niskie":
+		return "Very low"
+	case "niskie":
+		return "Low"
+	case "średnie":
+		return "Medium"
+	case "podwyższone":
+		return "Elevated"
+	case "wysokie":
+		return "High"
+	case "bardzo wysokie":
+		return "Very high"
+	default:
+		return s
+	}
+}
+
 func Render(r Report) string {
 	var b strings.Builder
 
@@ -52,7 +71,7 @@ func Render(r Report) string {
 		}
 		fmt.Fprintf(&b, " / P/L %s", formatSignedMoney(f.Currency, f.ProfitLoss))
 		if f.RiskLabel != "" {
-			fmt.Fprintf(&b, " [%s]", f.RiskLabel)
+			fmt.Fprintf(&b, " [%s]", TranslateRiskLabel(f.RiskLabel))
 		}
 		if f.Verdict.Level == analyzer.Alert || f.Verdict.Level == analyzer.Warning {
 			reason := ""

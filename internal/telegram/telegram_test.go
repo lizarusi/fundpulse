@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lizarusi/investments-healthcheck/internal/analyzer"
+	"github.com/lizarusi/fundpulse/internal/analyzer"
 )
 
 func sampleReport() Report {
@@ -58,7 +58,8 @@ func TestRenderIncludesHeaderAndTotals(t *testing.T) {
 		"Some Bond Fund",
 		"Crashy Fund",
 		"ALERT",
-		"Podwyższone",
+		"Elevated",
+		"High",
 	}
 	for _, s := range mustContain {
 		if !strings.Contains(out, s) {
