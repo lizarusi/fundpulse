@@ -18,7 +18,7 @@ func TestMaskToken(t *testing.T) {
 		{"short", "*****"},
 		{"12345678", "********"},
 		{"123456789", "1234**789"},
-		{"***REMOVED***", "8674*******************IoS"},
+		{"FAKE_TOKEN_xyz", "FAKE*******xyz"},
 	}
 	for _, tc := range cases {
 		got := maskToken(tc.in)
@@ -31,15 +31,15 @@ func TestMaskToken(t *testing.T) {
 func TestRenderConfigSummaryIncludesEverything(t *testing.T) {
 	cfg := config.WithDefaults(config.Config{
 		Telegram: config.Telegram{
-			BotToken:  "***REMOVED***",
-			ChannelID: "-1003900879151",
+			BotToken:  "TEST_FAKE_TOKEN_NOT_REAL_DO_NOT_USE_xyz",
+			ChannelID: "-1001111111111",
 		},
 		Funds: []config.FundEntry{
 			{
 				FundID:        "FIL133_A_USD",
 				URL:           "https://www.analizy.pl/x",
 				PurchaseDate:  time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
-				PurchaseUnits: 11059,
+				PurchaseUnits: 100,
 				PurchasePrice: 13.30,
 			},
 		},
@@ -52,8 +52,9 @@ func TestRenderConfigSummaryIncludesEverything(t *testing.T) {
 	out := buf.String()
 	mustContain := []string{
 		"/tmp/config.yaml",
-		"8674*******************IoS",
-		"-1003900879151",
+		"TEST",
+		"xyz",
+		"-1001111111111",
 		"18:00",
 		"USD",
 		"3.0",
@@ -61,7 +62,7 @@ func TestRenderConfigSummaryIncludesEverything(t *testing.T) {
 		"FIL133_A_USD",
 		"Fidelity Funds Global Dividend",
 		"2025-09-15",
-		"11059",
+		"100",
 		"13.30",
 	}
 	for _, s := range mustContain {
@@ -72,7 +73,7 @@ func TestRenderConfigSummaryIncludesEverything(t *testing.T) {
 }
 
 func TestRenderConfigSummaryDoesNotLeakBotToken(t *testing.T) {
-	token := "***REMOVED***"
+	token := "TEST_FAKE_TOKEN_FOR_LEAK_CHECK_NOT_REAL_DO_NOT_USE_xyz"
 	cfg := config.WithDefaults(config.Config{
 		Telegram: config.Telegram{BotToken: token, ChannelID: "x"},
 	})
