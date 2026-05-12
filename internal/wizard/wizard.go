@@ -15,6 +15,7 @@ import (
 
 type Validator interface {
 	Validate(fundURL string) (string, error)
+	FetchPrice(fundID string, date time.Time) (float64, error)
 }
 
 type liveValidator struct{}
@@ -27,7 +28,53 @@ func (liveValidator) Validate(fundURL string) (string, error) {
 	return snap.Name, nil
 }
 
+func (liveValidator) FetchPrice(fundID string, date time.Time) (float64, error) {
+	return fetchPriceForDate(fundID, date)
+}
+
 func DefaultValidator() Validator { return liveValidator{} }
+
+func fetchPriceForDate(fundID string, date time.Time) (float64, error) {
+	dateStr := date.Format("2006-01-02")
+
+	history, err := scraper.FetchHistory(fundID, date, date)
+	if err != nil {
+		return 0, err
+	}
+	for _, p := range history {
+		if p.Date.Format("2006-01-02") == dateStr {
+			return p.Value, nil
+		}
+	}
+
+	history, err = scraper.FetchHistory(fundID, date.AddDate(0, 0, -5), date.AddDate(0, 0, 5))
+	if err != nil {
+		return 0, err
+	}
+	var closest *scraper.HistoryPoint
+	minDiff := time.Hour * 24 * 365
+	for i, p := range history {
+		if p.Date.Format("2006-01-02") == dateStr {
+			return p.Value, nil
+		}
+		diff := absDuration(p.Date.Sub(date))
+		if diff < minDiff {
+			minDiff = diff
+			closest = &history[i]
+		}
+	}
+	if closest == nil {
+		return 0, fmt.Errorf("no price data available around %s", dateStr)
+	}
+	return closest.Value, nil
+}
+
+func absDuration(d time.Duration) time.Duration {
+	if d < 0 {
+		return -d
+	}
+	return d
+}
 
 func Run(in io.Reader, out io.Writer, initialCfg config.Config, v Validator) (config.Config, error) {
 	r := bufio.NewReader(in)
@@ -140,6 +187,26 @@ func promptFund(r *bufio.Reader, out io.Writer, v Validator, initial config.Fund
 		return config.FundEntry{}, fmt.Errorf("parse date: %w", err)
 	}
 
+	var price float64
+	keepExisting := !initial.PurchaseDate.IsZero() &&
+		initial.PurchaseDate.Format("2006-01-02") == d.Format("2006-01-02") &&
+		initial.PurchasePrice != 0
+	if keepExisting {
+		price = initial.PurchasePrice
+		fmt.Fprintf(out, "    -> keeping existing price %.2f\n", price)
+	} else {
+		if v == nil {
+			return config.FundEntry{}, fmt.Errorf("cannot fetch price: no validator configured")
+		}
+		fmt.Fprintf(out, "    -> fetching NAV for %s... ", d.Format("2006-01-02"))
+		price, err = v.FetchPrice(fundID, d)
+		if err != nil {
+			fmt.Fprintf(out, "failed: %v\n", err)
+			return config.FundEntry{}, fmt.Errorf("fetch price: %w", err)
+		}
+		fmt.Fprintf(out, "%.2f\n", price)
+	}
+
 	defaultUnits := ""
 	if initial.PurchaseUnits != 0 {
 		defaultUnits = strconv.FormatFloat(initial.PurchaseUnits, 'f', -1, 64)
@@ -151,19 +218,6 @@ func promptFund(r *bufio.Reader, out io.Writer, v Validator, initial config.Fund
 	units, err := strconv.ParseFloat(strings.TrimSpace(unitsStr), 64)
 	if err != nil {
 		return config.FundEntry{}, fmt.Errorf("parse units: %w", err)
-	}
-
-	defaultPrice := ""
-	if initial.PurchasePrice != 0 {
-		defaultPrice = strconv.FormatFloat(initial.PurchasePrice, 'f', -1, 64)
-	}
-	priceStr, err := prompt(r, out, "  Purchase NAV price", defaultPrice)
-	if err != nil {
-		return config.FundEntry{}, err
-	}
-	price, err := strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
-	if err != nil {
-		return config.FundEntry{}, fmt.Errorf("parse price: %w", err)
 	}
 
 	return config.FundEntry{

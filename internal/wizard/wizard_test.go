@@ -4,9 +4,30 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lizarusi/fundpulse/internal/config"
 )
+
+type mockValidator struct {
+	name  string
+	price float64
+	err   error
+}
+
+func (m mockValidator) Validate(fundURL string) (string, error) {
+	if m.err != nil {
+		return "", m.err
+	}
+	return m.name, nil
+}
+
+func (m mockValidator) FetchPrice(fundID string, date time.Time) (float64, error) {
+	if m.err != nil {
+		return 0, m.err
+	}
+	return m.price, nil
+}
 
 func TestExtractFundIDFromURL(t *testing.T) {
 	cases := []struct {
@@ -71,12 +92,11 @@ func TestRunCollectsFund(t *testing.T) {
 		"https://www.analizy.pl/fundusze-zagraniczne/FIL133_A_USD/x",
 		"2025-09-15",
 		"100",
-		"14.20",
 		"n",
 	}, "\n") + "\n"
 	in := strings.NewReader(input)
 	var out bytes.Buffer
-	cfg, err := Run(in, &out, config.Config{}, nil)
+	cfg, err := Run(in, &out, config.Config{}, mockValidator{name: "Fidelity", price: 14.20})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -141,13 +161,13 @@ func TestRunGranularFundEditing(t *testing.T) {
 		"d",                             // delete second
 		"e",                             // edit third
 		"",                              // keep URL
-		"2025-01-01", "20", "15.0",      // new data for EDIT
+		"2025-01-01", "20",              // new data for EDIT (price auto-fetched)
 		"n",                             // do not add more
 	}, "\n") + "\n"
 
 	in := strings.NewReader(input)
 	var out bytes.Buffer
-	cfg, err := Run(in, &out, initial, nil)
+	cfg, err := Run(in, &out, initial, mockValidator{name: "Mock", price: 15.0})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -163,5 +183,8 @@ func TestRunGranularFundEditing(t *testing.T) {
 	}
 	if cfg.Funds[1].PurchaseUnits != 20 {
 		t.Errorf("EDIT fund units = %v, want 20", cfg.Funds[1].PurchaseUnits)
+	}
+	if cfg.Funds[1].PurchasePrice != 15.0 {
+		t.Errorf("EDIT fund price = %v, want 15.0", cfg.Funds[1].PurchasePrice)
 	}
 }
